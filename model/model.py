@@ -24,21 +24,17 @@ class ObjectDetector:
         # Get the list of categories (object classes)
         self.categories = self.weights.meta['categories']
 
-    def predict(self, image_url: str, confidence_threshold: float = 0.75) -> list[str]:
+    def predict(self, image: Image.Image, confidence_threshold: float = 0.75) -> list[str]:
         """
         Detect objects in an image.
         
         Args:
-            image_url (str): URL of the image to analyze
+            image (Image.Image): PIL Image object to analyze
             confidence_threshold (float): Confidence threshold for filtering predictions
             
         Returns:
             list[str]: List of detected object names
         """
-        # Load the image
-        response = requests.get(image_url)
-        image = Image.open(BytesIO(response.content)).convert('RGB')
-        
         # Prepare the image
         transform = self.weights.transforms()
         img_tensor = transform(image).unsqueeze(0).to(self.device)
@@ -46,8 +42,9 @@ class ObjectDetector:
         # Get predictions
         with torch.no_grad():
             predictions = self.model(img_tensor)
-        
-        # Extract results
+            
+        # Process predictions
+        results = []
         pred = predictions[0]
         scores = pred['scores']
         labels = pred['labels']
@@ -57,6 +54,4 @@ class ObjectDetector:
         filtered_labels = labels[mask]
         
         # Convert class indices to their names
-        objects = [self.categories[label.item()] for label in filtered_labels]
-        
-        return objects 
+        return [self.categories[label.item()] for label in filtered_labels] 
